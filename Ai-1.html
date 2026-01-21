@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="shortcut icon" href="https://www.twghkywc.edu.hk/sites/default/files/sch_logo.png" type="image/png">
+    <title>KYWC-3D班網</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1A365D',
+                        secondary: '#2C5282',
+                        accent: '#D73F09',
+                        neutral: '#F8F9FA',
+                        dark: '#2D3748',
+                        grayHK: '#E2E8F0',
+                        success: '#38A169',
+                        warning: '#D69E2E',
+                        danger: '#E53E3E',
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans TC', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto { content-visibility: auto; }
+            .text-shadow { text-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+            .text-shadow-lg { text-shadow: 0 2px 4px rgba(0,0,0,0.12); }
+            .scale-hover { transition: transform 200ms; }
+            .scale-hover:hover { transform: scale(1.01); }
+            .card-shadow { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); }
+            .section-padding { padding-top: 3rem; padding-bottom: 3rem; }
+            @media (min-width: 768px) { .section-padding { padding-top: 4rem; padding-bottom: 4rem; } }
+            .section-divider { width: 4rem; height: 0.2rem; margin-left: auto; margin-right: auto; margin-top: 1rem; margin-bottom: 2rem; }
+            .dropdown-shadow { box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06); }
+            .anchor-target { scroll-margin-top: 100px; }
+            .hk-hover { transition: all 0.2s ease; }
+            /* 公告系统专用样式 */
+            .announcement-item { transition: all 0.2s ease; }
+            .announcement-item:hover { transform: translateY(-2px); }
+            .line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+            .modal-overlay { animation: fadeIn 0.3s ease-out; }
+            .modal-content { animation: slideUp 0.3s ease-out; }
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+            /* 登录页面样式 */
+            .login-container { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+            .login-card { backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.95); }
+            .shake { animation: shake 0.5s ease-in-out; }
+            @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+            /* 管理员面板样式 */
+            .admin-controls { transition: all 0.3s ease; }
+            .admin-controls.hidden { opacity: 0; transform: translateY(-10px); pointer-events: none; }
+        }
+    </style>
+</head>
+
+<body class="font-sans text-dark bg-white" id="main-body">
+    <!-- ==================== 登录页面 ==================== -->
+    <div id="login-page" class="min-h-screen login-container flex items-center justify-center p-4 hidden">
+        <div class="login-card rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="p-8">
+                <div class="text-center mb-8">
+                    <img src="https://www.twghkywc.edu.hk/sites/default/files/sch_logo.png" alt="KYWC Logo" class="w-16 h-16 mx-auto mb-4">
+                    <h1 class="text-3xl font-bold text-primary">KYWC 3D班網</h1>
+                    <p class="text-gray-600 mt-2">管理員登入系統</p>
+                </div>
+                
+                <form id="login-form" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">管理員帳號</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa fa-user text-gray-400"></i>
+                            </div>
+                            <input type="text" id="login-username" required
+                                   class="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                                   placeholder="輸入帳號">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">密碼</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa fa-lock text-gray-400"></i>
+                            </div>
+                            <input type="password" id="login-password" required
+                                   class="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                                   placeholder="輸入密碼">
+                            <button type="button" id="toggle-password" class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                <i class="fa fa-eye text-gray-400"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" id="remember-me" class="h-4 w-4 text-primary rounded">
+                        <label for="remember-me" class="ml-2 text-sm text-gray-600">記住我</label>
+                    </div>
+                    
+                    <div id="login-error" class="hidden p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <div class="flex items-center text-red-700">
+                            <i class="fa fa-exclamation-circle mr-2"></i>
+                            <span id="error-message">帳號或密碼錯誤</span>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors flex items-center justify-center">
+                        <i class="fa fa-sign-in-alt mr-2"></i> 登入系統
+                    </button>
+                    
+                    <div class="text-center text-sm text-gray-500 mt-4">
+                        <p>預設帳號: admin | 密碼: kywc3d2025</p>
+                        <p class="mt-2 text-xs">請勿在公共電腦記住密碼</p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 主网站内容 ==================== -->
+    <div id="main-content" class="hidden">
+        <div class="content-wrapper relative z-2">
+            <!-- 导航栏 - 添加管理员控制 -->
+            <header class="bg-white border-b border-grayHK sticky top-0 z-40">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between items-center py-3">
+                        <div class="logo">
+                            <a href="#home" class="flex items-center space-x-2" aria-label="返回首頁">
+                                <img src="https://www.twghkywc.edu.hk/sites/default/files/sch_logo.png" alt="KYWC學校標誌" class="w-7 h-7 sm:w-9 sm:h-9">
+                                <span class="text-lg font-bold text-primary hidden sm:inline">KYWC 3D班網</span>
+                            </a>
+                        </div>
+                        
+                        <!-- 管理员控制栏 -->
+                        <div id="admin-controls" class="admin-controls hidden flex items-center space-x-4">
+                            <button onclick="showAdminPanel()" class="px-3 py-1.5 bg-success text-white rounded-lg hover:bg-success/90 transition-colors flex items-center text-sm">
+                                <i class="fa fa-plus mr-1"></i> 新增公告
+                            </button>
+                            <button onclick="showUserManagement()" class="px-3 py-1.5 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors flex items-center text-sm">
+                                <i class="fa fa-users mr-1"></i> 用戶管理
+                            </button>
+                            <button onclick="logout()" class="px-3 py-1.5 bg-danger text-white rounded-lg hover:bg-danger/90 transition-colors flex items-center text-sm">
+                                <i class="fa fa-sign-out-alt mr-1"></i> 登出
+                            </button>
+                        </div>
+                        
+                        <nav class="hidden md:flex items-center space-x-1">
+                            <div class="relative group">
+                                <a href="#home" class="font-medium px-4 py-2 text-dark hk-hover hover:text-primary">首頁</a>
+                            </div>
+                            <div class="relative group">
+                                <a href="#announcements" class="font-medium px-4 py-2 text-dark hk-hover hover:text-primary">最新公告</a>
+                            </div>
+                            <div class="relative group">
+                                <a href="#about" class="font-medium px-4 py-2 text-dark hk-hover hover:text-primary">關於我們</a>
+                            </div>
+                            <div class="relative group">
+                                <a href="#contact" class="font-medium px-4 py-2 text-dark hk-hover hover:text-primary">聯絡我們</a>
+                            </div>
+                        </nav>
+                        
+                        <button id="menu-toggle" class="md:hidden text-dark hk-hover hover:text-primary focus:outline-none p-2">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 移动端菜单 -->
+                <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-grayHK overflow-y-auto">
+                    <div class="container mx-auto px-4 py-3 space-y-1">
+                        <a href="#home" class="block py-3 px-4 font-medium text-dark hk-hover hover:bg-primary/5 hover:text-primary rounded-lg">首頁</a>
+                        <a href="#announcements" class="block py-3 px-4 font-medium text-dark hk-hover hover:bg-primary/5 hover:text-primary rounded-lg">最新公告</a>
+                        <a href="#about" class="block py-3 px-4 font-medium text-dark hk-hover hover:bg-primary/5 hover:text-primary rounded-lg">關於我們</a>
+                        <a href="#contact" class="block py-3 px-4 font-medium text-dark hk-hover hover:bg-primary/5 hover:text-primary rounded-lg">聯絡我們</a>
+                        <div id="mobile-admin-controls" class="admin-controls hidden space-y-1 border-t pt-3 mt-3">
+                            <button onclick="showAdminPanel()" class="w-full text-left py-2 px-4 bg-success text-white rounded-lg hover:bg-success/90 transition-colors">
+                                <i class="fa fa-plus mr-2"></i>新增公告
+                            </button>
+                            <button onclick="logout()" class="w-full text-left py-2 px-4 bg-danger text-white rounded-lg hover:bg-danger/90 transition-colors">
+                                <i class="fa fa-sign-out-alt mr-2"></i>登出管理員
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 首页轮播 -->
+            <section id="home" class="anchor-target relative h-[280px] sm:h-[380px] md:h-[480px] lg:h-[580px] overflow-hidden">
+                <div id="slider" class="w-full h-full">
+                    <div class="slider-item absolute inset-0 opacity-100 transition-opacity duration-800">
+                        <div class="absolute inset-0 bg-gradient-to-r from-primary/70 to-transparent z-10"></div>
+                        <img src="https://picsum.photos/id/20/1600/900" alt="校園文化節" class="w-full h-full object-cover">
+                        <div class="absolute top-0 left-0 w-full h-full z-20 flex items-center">
+                            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                                <div class="max-w-lg text-white">
+                                    <h2 class="text-[clamp(1.4rem,4vw,3rem)] font-bold leading-tight text-shadow-lg mb-3">3D壁報設計</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== 动态公告系统 ==================== -->
+            <section id="announcements" class="anchor-target section-padding bg-neutral">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 class="text-2xl md:text-3xl font-bold text-center">最新公告</h2>
+                    <div class="section-divider bg-primary"></div>
+                    
+                    <!-- 管理员快速添加按钮 -->
+                    <div id="admin-quick-add" class="admin-controls hidden text-center mb-6">
+                        <button onclick="showAdminPanel()" class="inline-flex items-center px-4 py-2.5 bg-success text-white rounded-lg hover:bg-success/90 transition-colors shadow-lg">
+                            <i class="fa fa-plus-circle mr-2"></i> 新增公告
+                        </button>
+                    </div>
+                    
+                    <!-- 公告筛选分类 -->
+                    <div class="flex flex-wrap justify-center gap-2 sm:gap-3 mb-8">
+                        <button class="ann-filter-btn active px-3 sm:px-4 py-2 bg-primary text-white rounded-lg text-sm sm:text-base transition-all duration-200 hover:scale-105" data-category="all">
+                            全部公告 <span class="ann-count ml-1">(5)</span>
+                        </button>
+                        <button class="ann-filter-btn px-3 sm:px-4 py-2 bg-white border border-primary text-primary rounded-lg text-sm sm:text-base transition-all duration-200 hover:scale-105 hover:bg-primary hover:text-white" data-category="exam">
+                            考試資訊 <span class="ann-count ml-1">(2)</span>
+                        </button>
+                        <button class="ann-filter-btn px-3 sm:px-4 py-2 bg-white border border-primary text-primary rounded-lg text-sm sm:text-base transition-all duration-200 hover:scale-105 hover:bg-primary hover:text-white" data-category="activity">
+                            活動通知 <span class="ann-count ml-1">(2)</span>
+                        </button>
+                        <button class="ann-filter-btn px-3 sm:px-4 py-2 bg-white border border-primary text-primary rounded-lg text-sm sm:text-base transition-all duration-200 hover:scale-105 hover:bg-primary hover:text-white" data-category="homework">
+                            作業提交 <span class="ann-count ml-1">(1)</span>
+                        </button>
+                    </div>
+                    
+                    <!-- 搜索框 -->
+                    <div class="max-w-md mx-auto mb-8">
+                        <div class="relative">
+                            <input type="text" id="ann-search" placeholder="搜索公告標題或內容..." class="w-full px-4 py-3 pl-12 bg-white border border-grayHK rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                            <div class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                <i class="fa fa-search"></i>
+                            </div>
+                            <button id="clear-search" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-primary hidden">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 公告列表容器 -->
+                    <div id="announcements-container" class="space-y-4">
+                        <div class="text-center py-12">
+                            <div class="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+                            <p class="mt-3 text-gray-500 font-medium">載入公告中...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 分页控件 -->
+                    <div id="pagination" class="flex flex-col sm:flex-row justify-center items-center gap-4 mt-8 hidden">
+                        <div class="flex items-center space-x-2">
+                            <button id="prev-page" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                <i class="fa fa-chevron-left mr-2"></i>上一頁
+                            </button>
+                            <span id="page-info" class="px-4 py-2 text-gray-700 font-medium">
+                                第 <span id="current-page" class="text-primary font-bold">1</span> 頁 / 共 <span id="total-pages" class="text-primary font-bold">1</span> 頁
+                            </span>
+                            <button id="next-page" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                下一頁<i class="fa fa-chevron-right ml-2"></i>
+                            </button>
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            共 <span id="total-announcements" class="font-medium">0</span> 則公告
+                        </div>
+                    </div>
+                    
+                    <!-- 无结果提示 -->
+                    <div id="no-results" class="hidden text-center py-12">
+                        <i class="fa fa-inbox text-5xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500 text-lg font-medium">找不到相關公告</p>
+                        <p class="text-gray-400 mt-2">請嘗試其他關鍵字或分類</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 关于我们 -->
+            <section id="about" class="anchor-target section-padding bg-white">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center mb-10">
+                        <h2 class="text-[clamp(1.4rem,3vw,2.2rem)] font-bold text-dark mb-3">關於我們</h2>
+                        <div class="section-divider bg-primary"></div>
+                        <p class="text-gray-600 mt-4">歡迎來到KYWC 3D班網</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 页脚 -->
+            <footer class="bg-dark text-white py-8">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center">
+                        <p class="text-gray-400">&copy; 2025 KYWC_3D班網. 保留所有權利。</p>
+                        <div id="footer-admin-info" class="admin-controls hidden mt-2">
+                            <p class="text-sm text-gray-500">管理員模式</p>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ==================== JavaScript 代码 ==================== -->
+    <script>
+        // 全局变量
+        let currentUser = null;
+        let announcements = [];
+        let filteredAnnouncements = [];
+        let currentPage = 1;
+        const itemsPerPage = 5;
+        let currentCategory = 'all';
+        let currentSearch = '';
+        
+        // 管理员账号配置
+        const ADMIN_CREDENTIALS = {
+            username: 'admin',
+            password: 'kywc3d2025'
+        };
+        
+        // 用户数据（可扩展）
+        const USERS = [
+            { id: 1, username: 'admin', password: 'kywc3d2025', role: 'admin', name: '系統管理員' },
+            { id: 2, username: 'teacher1', password: 'teacher123', role: 'teacher', name: '吳凱翎老師' },
+            { id: 3, username: 'teacher2', password: 'teacher456', role: 'teacher', name: '黃勁權老師' },
+            { id: 4, username: 'student1', password: 'student123', role: 'student', name: '学生姓名' }
+        ];
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initAnnouncementSystem();
+            checkLoginStatus();
+            
+            // 登录表单提交
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            
+            // 显示/隐藏密码
+            document.getElementById('toggle-password').addEventListener('click', function() {
+                const passwordInput = document.getElementById('login-password');
+                const icon = this.querySelector('i');
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    passwordInput.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            });
+            
+            // 移动端菜单
+            const menuToggle = document.getElementById('menu-toggle');
+            const mobileMenu = document.getElementById('mobile-menu');
+            
+            if (menuToggle) {
+                menuToggle.addEventListener('click', function() {
+                    mobileMenu.classList.toggle('hidden');
+                    const icon = this.querySelector('i');
+                    icon.classList.toggle('fa-bars');
+                    icon.classList.toggle('fa-times');
+                });
+            }
+        });
+
+        // ==================== 登录系统 ====================
+        function checkLoginStatus() {
+            const savedUser = localStorage.getItem('announcement_admin_user');
+            const savedToken = localStorage.getItem('announcement_admin_token');
+            
+            if (savedUser && savedToken) {
+                try {
+                    const userData = JSON.parse(savedUser);
+                    const tokenData = JSON.parse(savedToken);
+                    
+                    // 检查token是否过期（7天）
+                    if (Date.now() - tokenData.timestamp < 7 * 24 * 60 * 60 * 1000) {
+                        currentUser = userData;
+                        showMainContent();
+                    } else {
+                        logout();
+                    }
+                } catch (e) {
+                    logout();
+                }
+            } else {
+                showLoginPage();
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+            const rememberMe = document.getElementById('remember-me').checked;
+            
+            const user = USERS.find(u => u.username === username && u.password === password);
+            
+            if (user) {
+                // 登录成功
+                currentUser = user;
+                
+                // 保存登录状态
+                if (rememberMe) {
+                    localStorage.setItem('announcement_admin_user', JSON.stringify(user));
+                    localStorage.setItem('announcement_admin_token', JSON.stringify({
+                        timestamp: Date.now(),
+                        expires: 7 * 24 * 60 * 60 * 1000 // 7天
+                    }));
+                } else {
+                    sessionStorage.setItem('announcement_admin_user', JSON.stringify(user));
+                }
+                
+                showMainContent();
+            } else {
+                // 登录失败
+                const errorDiv = document.getElementById('login-error');
+                const errorMsg = document.getElementById('error-message');
+                
+                errorMsg.textContent = '帳號或密碼錯誤';
+                errorDiv.classList.remove('hidden');
+                
+                // 抖动效果
+                const form = document.getElementById('login-form');
+                form.classList.add('shake');
+                setTimeout(() => form.classList.remove('shake'), 500);
+                
+                // 清空密码
+                document.getElementById('login-password').value = '';
+            }
+        }
+
+        function showLoginPage() {
+            document.getElementById('login-page').classList.remove('hidden');
+            document.getElementById('main-content').classList.add('hidden');
+            document.getElementById('main-body').style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        }
+
+        function showMainContent() {
+            document.getElementById('login-page').classList.add('hidden');
+            document.getElementById('main-content').classList.remove('hidden');
+            document.getElementById('main-body').style.background = '';
+            
+            // 显示管理员控制
+            if (currentUser && currentUser.role === 'admin') {
+                showAdminControls(true);
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('announcement_admin_user');
+            localStorage.removeItem('announcement_admin_token');
+            sessionStorage.removeItem('announcement_admin_user');
+            
+            // 隐藏管理员控制
+            showAdminControls(false);
+            
+            // 跳转到首页
+            window.location.href = '#home';
+            
+            showLoginPage();
+        }
+
+        function showAdminControls(show) {
+            const adminElements = document.querySelectorAll('.admin-controls');
+            if (show) {
+                adminElements.forEach(el => el.classList.remove('hidden'));
+            } else {
+                adminElements.forEach(el => el.classList.add('hidden'));
+            }
+        }
+
+        // ==================== 公告系统 ====================
+        const announcementData = [
+            {
+                id: 1,
+                title: "期末考試安排通知",
+                date: "2023-12-15",
+                author: "班導師",
+                category: "exam",
+                content: "期末考試將於1月15日至1月20日舉行，請同學們提前作好準備，合理安排溫習時間。具體考試時間表已上傳至班級群組。",
+                important: true,
+                attachments: [
+                    { name: "考試時間表.pdf", url: "#", icon: "fa-file-pdf-o" },
+                    { name: "考場安排.docx", url: "#", icon: "fa-file-word-o" }
+                ]
+            },
+            {
+                id: 2,
+                title: "聖誕聯歡活動籌備",
+                date: "2023-12-10",
+                author: "班會幹事",
+                category: "activity",
+                content: "聖誕聯歡活動將於12月22日下午2時在學校禮堂舉行，現開始收集節目和遊戲提案，有意參與策劃的同學請聯繫班長。",
+                important: false,
+                attachments: []
+            },
+            {
+                id: 3,
+                title: "校園義工招募",
+                date: "2023-12-05",
+                author: "服務學習組",
+                category: "activity",
+                content: "學校將於12月24日組織校園義工活動，協助社區老人中心舉辦聖誕派對，歡迎同學們踴躍報名參加。報名截止日期：12月15日。",
+                important: true,
+                attachments: [
+                    { name: "義工報名表.docx", url: "#", icon: "fa-file-word-o" }
+                ]
+            },
+            {
+                id: 4,
+                title: "中文作文提交提醒",
+                date: "2023-12-03",
+                author: "中文科老師",
+                category: "homework",
+                content: "請同學於12月10日前將期末作文上傳至Google Classroom，逾期提交將按規定扣分。如有問題請及時聯絡老師。",
+                important: false,
+                attachments: []
+            },
+            {
+                id: 5,
+                title: "數學補習班通知",
+                date: "2023-11-28",
+                author: "數學科組",
+                category: "exam",
+                content: "為協助同學準備期末考試，數學科將於每週三放學後在301室舉行補習班，歡迎有需要的同學參加。",
+                important: false,
+                attachments: [
+                    { name: "補習班時間表.pdf", url: "#", icon: "fa-file-pdf-o" }
+                ]
+            }
+        ];
+
+        function initAnnouncementSystem() {
+            // 从localStorage加载或使用默认数据
+            const savedData = localStorage.getItem('announcement_data');
+            if (savedData) {
+                try {
+                    announcements = JSON.parse(savedData);
+                } catch (e) {
+                    announcements = announcementData;
+                }
+            } else {
+                announcements = announcementData;
+            }
+            
+            announcements = announcements.map(ann => ({
+                ...ann,
+                dateObj: new Date(ann.date),
+                formattedDate: formatDate(ann.date)
+            }));
+
+            announcements.sort((a, b) => b.dateObj - a.dateObj);
+            filteredAnnouncements = [...announcements];
+            
+            setupEventListeners();
+            renderAnnouncements();
+            updateCategoryCounts();
+        }
+
+        function setupEventListeners() {
+            // 分类筛选
+            document.querySelectorAll('.ann-filter-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const category = this.dataset.category;
+                    
+                    document.querySelectorAll('.ann-filter-btn').forEach(b => {
+                        b.classList.remove('active', 'bg-primary', 'text-white');
+                        b.classList.add('bg-white', 'border', 'border-primary', 'text-primary');
+                    });
+                    
+                    this.classList.add('active', 'bg-primary', 'text-white');
+                    this.classList.remove('bg-white', 'border', 'border-primary', 'text-primary');
+                    
+                    filterByCategory(category);
+                });
+            });
+
+            // 搜索功能
+            const searchInput = document.getElementById('ann-search');
+            const clearSearchBtn = document.getElementById('clear-search');
+            
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    currentSearch = this.value.trim();
+                    
+                    if (currentSearch) {
+                        clearSearchBtn.classList.remove('hidden');
+                    } else {
+                        clearSearchBtn.classList.add('hidden');
+                    }
+                    
+                    applyFilters();
+                });
+                
+                let searchTimeout;
+                searchInput.addEventListener('keyup', function() {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        applyFilters();
+                    }, 300);
+                });
+            }
+
+            if (clearSearchBtn) {
+                clearSearchBtn.addEventListener('click', function() {
+                    searchInput.value = '';
+                    currentSearch = '';
+                    this.classList.add('hidden');
+                    applyFilters();
+                });
+            }
+
+            // 分页按钮
+            document.getElementById('prev-page')?.addEventListener('click', prevPage);
+            document.getElementById('next-page')?.addEventListener('click', nextPage);
+        }
+
+        function filterByCategory(category) {
+            currentCategory = category;
+            currentPage = 1;
+            applyFilters();
+        }
+
+        function applyFilters() {
+            if (currentCategory === 'all') {
+                filteredAnnouncements = [...announcements];
+            } else {
+                filteredAnnouncements = announcements.filter(
+                    ann => ann.category === currentCategory
+                );
+            }
+            
+            if (currentSearch) {
+                const searchLower = currentSearch.toLowerCase();
+                filteredAnnouncements = filteredAnnouncements.filter(ann => 
+                    ann.title.toLowerCase().includes(searchLower) || 
+                    ann.content.toLowerCase().includes(searchLower) ||
+                    ann.author.toLowerCase().includes(searchLower)
+                );
+            }
+            
+            renderAnnouncements();
+            
+            const noResults = document.getElementById('no-results');
+            if (filteredAnnouncements.length === 0) {
+                noResults.classList.remove('hidden');
+            } else {
+                noResults.classList.add('hidden');
+            }
+        }
+
+        function renderAnnouncements() {
+            const container = document.getElementById('announcements-container');
+            if (!container) return;
+            
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageAnnouncements = filteredAnnouncements.slice(startIndex, endIndex);
+            
+            if (pageAnnouncements.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            container.innerHTML = pageAnnouncements.map(ann => `
+                <div class="announcement-item bg-white rounded-lg card-shadow overflow-hidden border-l-4 ${ann.important ? 'border-accent' : 'border-transparent'}">
+                    <div class="p-5 md:p-6">
+                        <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                            <div class="flex-1">
+                                <div class="flex flex-wrap items-center gap-3 mb-2">
+                                    <h3 class="text-xl font-semibold text-primary">${ann.title}</h3>
+                                    <div class="flex items-center gap-2">
+                                        ${ann.important ? 
+                                            '<span class="px-2 py-1 bg-accent/10 text-accent text-xs font-medium rounded-full flex items-center gap-1">' +
+                                            '<i class="fa fa-exclamation-circle text-xs"></i> 重要</span>' : ''}
+                                        <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
+                                            ${getCategoryName(ann.category)}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex flex-wrap items-center gap-4 text-gray-500 text-sm mb-3">
+                                    <span class="flex items-center">
+                                        <i class="fa fa-calendar-o mr-2"></i> ${ann.formattedDate}
+                                    </span>
+                                    <span class="flex items-center">
+                                        <i class="fa fa-user mr-2"></i> ${ann.author}
+                                    </span>
+                                </div>
+                                
+                                <p class="text-gray-600 line-clamp-2 mb-4">${ann.content}</p>
+                                
+                                ${ann.attachments && ann.attachments.length > 0 ? `
+                                    <div class="flex flex-wrap gap-2">
+                                        ${ann.attachments.map(att => `
+                                            <a href="${att.url}" class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm text-gray-700 transition-colors">
+                                                <div class="w-8 h-8 flex items-center justify-center bg-white rounded">
+                                                    <i class="fa ${att.icon} text-gray-600"></i>
+                                                </div>
+                                                <span class="truncate max-w-[120px]">${att.name}</span>
+                                            </a>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            
+                            <div class="flex flex-col items-start md:items-end gap-3">
+                                <button onclick="showAnnouncementDetail(${ann.id})" 
+                                        class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
+                                    詳細內容 <i class="fa fa-arrow-right"></i>
+                                </button>
+                                
+                                ${currentUser && currentUser.role === 'admin' ? `
+                                    <div class="flex gap-2">
+                                        <button onclick="editAnnouncement(${ann.id})" class="px-3 py-1 bg-secondary text-white text-xs rounded hover:bg-secondary/90">
+                                            <i class="fa fa-edit"></i> 編輯
+                                        </button>
+                                        <button onclick="deleteAnnouncement(${ann.id})" class="px-3 py-1 bg-danger text-white text-xs rounded hover:bg-danger/90">
+                                            <i class="fa fa-trash"></i> 刪除
+                                        </button>
+                                    </div>
+                                ` : ''}
+                                
+                                <div class="text-xs text-gray-500">
+                                    <i class="fa fa-clock-o mr-1"></i>${formatTimeAgo(ann.dateObj)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            updatePagination();
+        }
+
+        function updatePagination() {
+            const pagination = document.getElementById('pagination');
+            const totalPages = Math.ceil(filteredAnnouncements.length / itemsPerPage);
+            
+            document.getElementById('total-announcements').textContent = filteredAnnouncements.length;
+            
+            if (totalPages > 1) {
+                pagination.classList.remove('hidden');
+                document.getElementById('current-page').textContent = currentPage;
+                document.getElementById('total-pages').textContent = totalPages;
+                
+                const prevBtn = document.getElementById('prev-page');
+                const nextBtn = document.getElementById('next-page');
+                
+                prevBtn.disabled = currentPage === 1;
+                nextBtn.disabled = currentPage === totalPages;
+            } else {
+                pagination.classList.add('hidden');
+            }
+        }
+
+        function updateCategoryCounts() {
+            const counts = {
+                all: announcements.length,
+                exam: announcements.filter(a => a.category === 'exam').length,
+                activity: announcements.filter(a => a.category === 'activity').length,
+                homework: announcements.filter(a => a.category === 'homework').length
+            };
+            
+            document.querySelectorAll('.ann-filter-btn').forEach(btn => {
+                const category = btn.dataset.category;
+                const countSpan = btn.querySelector('.ann-count');
+                if (countSpan && counts[category] !== undefined) {
+                    countSpan.textContent = `(${counts[category]})`;
+                }
+            });
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderAnnouncements();
+                scrollToAnnouncements();
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(filteredAnnouncements.length / itemsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderAnnouncements();
+                scrollToAnnouncements();
+            }
+        }
+
+        // ==================== 管理员面板 ====================
+        window.showAdminPanel = function(mode = 'add', announcementId = null) {
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert('請先登入管理員帳號');
+                return;
+            }
+            
+            const announcement = announcementId ? announcements.find(a => a.id === announcementId) : null;
+            
+            const modalHtml = `
+                <div class="modal-overlay fixed inset-0 bg-black/70 z-[100] flex items-start justify-center p-4 overflow-y-auto">
+                    <div class="modal-content bg-white rounded-xl max-w-2xl w-full my-8 shadow-2xl">
+                        <div class="sticky top-0 bg-white border-b p-6 flex justify-between items-center">
+                            <h3 class="text-2xl font-bold text-primary">
+                                <i class="fa fa-${mode === 'add' ? 'plus' : 'edit'} mr-2"></i>
+                                ${mode === 'add' ? '新增公告' : '編輯公告'}
+                            </h3>
+                            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl transition-colors">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="p-6 max-h-[70vh] overflow-y-auto">
+                            <form id="announcement-form" class="space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">公告標題 *</label>
+                                        <input type="text" id="admin-title" required
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                                               value="${announcement ? announcement.title : ''}">
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">發布者</label>
+                                        <input type="text" id="admin-author" 
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                               value="${announcement ? announcement.author : currentUser.name}">
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">分類 *</label>
+                                        <select id="admin-category" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                            <option value="exam" ${announcement?.category === 'exam' ? 'selected' : ''}>考試資訊</option>
+                                            <option value="activity" ${announcement?.category === 'activity' ? 'selected' : ''}>活動通知</option>
+                                            <option value="homework" ${announcement?.category === 'homework' ? 'selected' : ''}>作業提交</option>
+                                            <option value="general" ${announcement?.category === 'general' ? 'selected' : ''}>一般通知</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">發布日期</label>
+                                        <input type="date" id="admin-date"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                               value="${announcement ? announcement.date : new Date().toISOString().split('T')[0]}">
+                                    </div>
+                                    
+                                    <div class="flex items-end">
+                                        <div class="flex items-center h-10">
+                                            <input type="checkbox" id="admin-important" class="h-5 w-5 text-primary rounded"
+                                                   ${announcement?.important ? 'checked' : ''}>
+                                            <label for="admin-important" class="ml-2 text-sm text-gray-700">標記為重要公告</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">公告內容 *</label>
+                                    <textarea id="admin-content" rows="6" required
+                                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">${announcement ? announcement.content : ''}</textarea>
+                                </div>
+                                
+                                <div id="attachment-section">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <label class="block text-sm font-medium text-gray-700">附件</label>
+                                        <button type="button" onclick="addAttachmentField()" class="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded">
+                                            <i class="fa fa-plus mr-1"></i>添加附件
+                                        </button>
+                                    </div>
+                                    <div id="attachment-fields" class="space-y-2">
+                                        ${announcement && announcement.attachments && announcement.attachments.length > 0 ? 
+                                            announcement.attachments.map((att, index) => `
+                                                <div class="flex gap-2">
+                                                    <input type="text" class="flex-1 px-3 py-2 border rounded" 
+                                                           placeholder="文件名稱" value="${att.name}">
+                                                    <input type="text" class="flex-1 px-3 py-2 border rounded" 
+                                                           placeholder="文件鏈接" value="${att.url}">
+                                                    <select class="px-3 py-2 border rounded">
+                                                        <option value="fa-file-pdf-o" ${att.icon === 'fa-file-pdf-o' ? 'selected' : ''}>PDF</option>
+                                                        <option value="fa-file-word-o" ${att.icon === 'fa-file-word-o' ? 'selected' : ''}>Word</option>
+                                                        <option value="fa-file-excel-o" ${att.icon === 'fa-file-excel-o' ? 'selected' : ''}>Excel</option>
+                                                        <option value="fa-file-image-o" ${att.icon === 'fa-file-image-o' ? 'selected' : ''}>圖片</option>
+                                                    </select>
+                                                    <button type="button" onclick="removeAttachmentField(this)" class="px-3 py-2 text-red-500 hover:text-red-700">
+                                                        <i class="fa fa-times"></i>
+                                                    </button>
+                                                </div>
+                                            `).join('') : 
+                                            '<p class="text-sm text-gray-500">暫無附件，可點擊上方按鈕添加</p>'
+                                        }
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div class="border-t p-6 flex justify-end gap-3">
+                            <button onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                取消
+                            </button>
+                            <button onclick="submitAnnouncementForm('${mode}', ${announcementId || 'null'})" 
+                                    class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                                ${mode === 'add' ? '發布公告' : '更新公告'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const modalContainer = document.createElement('div');
+            modalContainer.innerHTML = modalHtml;
+            document.body.appendChild(modalContainer);
+            document.body.style.overflow = 'hidden';
+        };
+
+        function addAttachmentField() {
+            const container = document.getElementById('attachment-fields');
+            if (container.querySelector('p')) {
+                container.innerHTML = '';
+            }
+            
+            const fieldHtml = `
+                <div class="flex gap-2">
+                    <input type="text" class="flex-1 px-3 py-2 border rounded" placeholder="文件名稱">
+                    <input type="text" class="flex-1 px-3 py-2 border rounded" placeholder="文件鏈接">
+                    <select class="px-3 py-2 border rounded">
+                        <option value="fa-file-pdf-o">PDF</option>
+                        <option value="fa-file-word-o">Word</option>
+                        <option value="fa-file-excel-o">Excel</option>
+                        <option value="fa-file-image-o">圖片</option>
+                    </select>
+                    <button type="button" onclick="removeAttachmentField(this)" class="px-3 py-2 text-red-500 hover:text-red-700">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', fieldHtml);
+        }
+
+        function removeAttachmentField(button) {
+            const field = button.closest('div');
+            field.remove();
+            
+            const container = document.getElementById('attachment-fields');
+            if (container.children.length === 0) {
+                container.innerHTML = '<p class="text-sm text-gray-500">暫無附件，可點擊上方按鈕添加</p>';
+            }
+        }
+
+        window.submitAnnouncementForm = function(mode, announcementId) {
+            const title = document.getElementById('admin-title').value.trim();
+            const content = document.getElementById('admin-content').value.trim();
+            const author = document.getElementById('admin-author').value.trim() || currentUser.name;
+            const category = document.getElementById('admin-category').value;
+            const date = document.getElementById('admin-date').value;
+            const important = document.getElementById('admin-important').checked;
+            
+            if (!title || !content) {
+                alert('請填寫標題和內容');
+                return;
+            }
+            
+            // 收集附件
+            const attachments = [];
+            const attachmentFields = document.querySelectorAll('#attachment-fields > div');
+            attachmentFields.forEach(field => {
+                const inputs = field.querySelectorAll('input');
+                const select = field.querySelector('select');
+                if (inputs[0].value && inputs[1].value) {
+                    attachments.push({
+                        name: inputs[0].value,
+                        url: inputs[1].value,
+                        icon: select.value
+                    });
+                }
+            });
+            
+            const newAnn = {
+                title,
+                content,
+                author,
+                category,
+                date: date || new Date().toISOString().split('T')[0],
+                important,
+                attachments
+            };
+            
+            if (mode === 'add') {
+                addAnnouncement(newAnn);
+            } else {
+                updateAnnouncement(announcementId, newAnn);
+            }
+            
+            closeModal();
+        };
+
+        window.editAnnouncement = function(id) {
+            showAdminPanel('edit', id);
+        };
+
+        window.deleteAnnouncement = function(id) {
+            if (!confirm('確定要刪除此公告嗎？此操作無法復原。')) {
+                return;
+            }
+            
+            announcements = announcements.filter(ann => ann.id !== id);
+            filteredAnnouncements = filteredAnnouncements.filter(ann => ann.id !== id);
+            
+            saveToLocalStorage();
+            renderAnnouncements();
+            updateCategoryCounts();
+            
+            alert('公告已刪除');
+        };
+
+        function addAnnouncement(newAnn) {
+            const newId = announcements.length > 0 ? Math.max(...announcements.map(a => a.id)) + 1 : 1;
+            const newAnnouncement = {
+                id: newId,
+                ...newAnn,
+                dateObj: new Date(newAnn.date),
+                formattedDate: formatDate(newAnn.date)
+            };
+            
+            announcements.unshift(newAnnouncement);
+            filteredAnnouncements = [...announcements];
+            currentPage = 1;
+            
+            saveToLocalStorage();
+            renderAnnouncements();
+            updateCategoryCounts();
+            
+            alert('公告已成功添加！');
+        }
+
+        function updateAnnouncement(id, updatedData) {
+            const index = announcements.findIndex(a => a.id === id);
+            if (index !== -1) {
+                announcements[index] = {
+                    ...announcements[index],
+                    ...updatedData,
+                    id: id,
+                    dateObj: new Date(updatedData.date),
+                    formattedDate: formatDate(updatedData.date)
+                };
+                
+                filteredAnnouncements = [...announcements];
+                saveToLocalStorage();
+                renderAnnouncements();
+                updateCategoryCounts();
+                
+                alert('公告已更新！');
+            }
+        }
+
+        function saveToLocalStorage() {
+            const dataToSave = announcements.map(ann => {
+                const { dateObj, formattedDate, ...rest } = ann;
+                return rest;
+            });
+            localStorage.setItem('announcement_data', JSON.stringify(dataToSave));
+        }
+
+        window.showUserManagement = function() {
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert('只有管理員可以訪問此功能');
+                return;
+            }
+            
+            const modalHtml = `
+                <div class="modal-overlay fixed inset-0 bg-black/70 z-[100] flex items-start justify-center p-4 overflow-y-auto">
+                    <div class="modal-content bg-white rounded-xl max-w-3xl w-full my-8 shadow-2xl">
+                        <div class="sticky top-0 bg-white border-b p-6 flex justify-between items-center">
+                            <h3 class="text-2xl font-bold text-primary">
+                                <i class="fa fa-users mr-2"></i> 用戶管理
+                            </h3>
+                            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="p-6 max-h-[60vh] overflow-y-auto">
+                            <div class="overflow-x-auto">
+                                <table class="w-full border-collapse">
+                                    <thead>
+                                        <tr class="bg-gray-50">
+                                            <th class="px-4 py-3 text-left font-semibold text-gray-700">ID</th>
+                                            <th class="px-4 py-3 text-left font-semibold text-gray-700">用戶名</th>
+                                            <th class="px-4 py-3 text-left font-semibold text-gray-700">姓名</th>
+                                            <th class="px-4 py-3 text-left font-semibold text-gray-700">角色</th>
+                                            <th class="px-4 py-3 text-left font-semibold text-gray-700">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${USERS.map(user => `
+                                            <tr class="border-t">
+                                                <td class="px-4 py-3">${user.id}</td>
+                                                <td class="px-4 py-3">${user.username}</td>
+                                                <td class="px-4 py-3">${user.name}</td>
+                                                <td class="px-4 py-3">
+                                                    <span class="px-2 py-1 rounded text-xs font-medium ${
+                                                        user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                                                        user.role === 'teacher' ? 'bg-blue-100 text-blue-800' :
+                                                        'bg-gray-100 text-gray-800'
+                                                    }">
+                                                        ${user.role === 'admin' ? '管理員' : 
+                                                          user.role === 'teacher' ? '教師' : '學生'}
+                                                    </span>
+                                                </td>
+                                                <td class="px-4 py-3">
+                                                    <button class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded mr-2">
+                                                        重置密碼
+                                                    </button>
+                                                    ${user.role !== 'admin' ? 
+                                                        '<button class="px-2 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded">刪除</button>' : 
+                                                        '<span class="text-gray-400 text-xs">系統管理員</span>'}
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="border-t p-6">
+                            <p class="text-sm text-gray-500 mb-4">
+                                <i class="fa fa-info-circle mr-2"></i>
+                                用戶管理功能（演示版）。完整版可實現新增、編輯、刪除用戶等功能。
+                            </p>
+                            <div class="flex justify-end">
+                                <button onclick="closeModal()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">
+                                    關閉
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const modalContainer = document.createElement('div');
+            modalContainer.innerHTML = modalHtml;
+            document.body.appendChild(modalContainer);
+            document.body.style.overflow = 'hidden';
+        };
+
+        // ==================== 通用功能 ====================
+        window.showAnnouncementDetail = function(id) {
+            const ann = announcements.find(a => a.id === id);
+            if (!ann) return;
+            
+            const modalHtml = `
+                <div class="modal-overlay fixed inset-0 bg-black/70 z-[100] flex items-start justify-center p-4 overflow-y-auto">
+                    <div class="modal-content bg-white rounded-xl max-w-2xl w-full my-8 shadow-2xl">
+                        <div class="sticky top-0 bg-white border-b p-6 flex justify-between items-center">
+                            <h3 class="text-2xl font-bold text-primary">${ann.title}</h3>
+                            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="p-6 max-h-[70vh] overflow-y-auto">
+                            <div class="flex flex-wrap items-center gap-4 text-gray-500 mb-6 pb-6 border-b">
+                                <span class="flex items-center">
+                                    <i class="fa fa-calendar-o mr-2"></i> ${ann.formattedDate}
+                                </span>
+                                <span class="flex items-center">
+                                    <i class="fa fa-user mr-2"></i> ${ann.author}
+                                </span>
+                                <span class="flex items-center">
+                                    <i class="fa fa-tag mr-2"></i> ${getCategoryName(ann.category)}
+                                </span>
+                                ${ann.important ? 
+                                    '<span class="px-3 py-1 bg-accent text-white text-sm font-medium rounded-full">重要公告</span>' : ''}
+                            </div>
+                            
+                            <div class="prose max-w-none">
+                                <p class="text-gray-700 leading-relaxed whitespace-pre-line">${ann.content}</p>
+                            </div>
+                            
+                            ${ann.attachments && ann.attachments.length > 0 ? `
+                                <div class="mt-8 pt-6 border-t">
+                                    <h4 class="font-semibold text-lg mb-4">附件下載</h4>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        ${ann.attachments.map(att => `
+                                            <a href="${att.url}" target="_blank" 
+                                               class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                                <div class="w-12 h-12 flex items-center justify-center bg-white rounded-lg">
+                                                    <i class="fa ${att.icon} text-gray-700 text-lg"></i>
+                                                </div>
+                                                <div class="flex-1">
+                                                    <p class="font-medium text-sm">${att.name}</p>
+                                                    <p class="text-xs text-gray-500">點擊下載</p>
+                                                </div>
+                                                <i class="fa fa-download text-gray-400"></i>
+                                            </a>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="border-t p-6 flex justify-end">
+                            <button onclick="closeModal()" class="px-5 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90">
+                                關閉
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const modalContainer = document.createElement('div');
+            modalContainer.innerHTML = modalHtml;
+            document.body.appendChild(modalContainer);
+            document.body.style.overflow = 'hidden';
+        };
+
+        window.closeModal = function() {
+            const modal = document.querySelector('.modal-overlay');
+            if (modal) {
+                modal.remove();
+                document.body.style.overflow = '';
+            }
+        };
+
+        function scrollToAnnouncements() {
+            const element = document.getElementById('announcements');
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('zh-TW', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        function formatTimeAgo(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / (1000 * 60));
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            
+            if (diffMins < 60) {
+                return `${diffMins}分鐘前`;
+            } else if (diffHours < 24) {
+                return `${diffHours}小時前`;
+            } else if (diffDays < 7) {
+                return `${diffDays}天前`;
+            } else {
+                return formatDate(date);
+            }
+        }
+
+        function getCategoryName(categoryId) {
+            const categoryMap = {
+                'exam': '考試資訊',
+                'activity': '活動通知',
+                'homework': '作業提交',
+                'general': '一般通知'
+            };
+            return categoryMap[categoryId] || categoryId;
+        }
+    </script>
+</body>
+</html>
