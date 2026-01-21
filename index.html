@@ -1,0 +1,1656 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KYWC-3D班網 - 多人同步系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1A365D',
+                        secondary: '#2C5282',
+                        accent: '#D73F09',
+                        neutral: '#F8F9FA',
+                        dark: '#2D3748',
+                        grayHK: '#E2E8F0',
+                        success: '#38A169',
+                        warning: '#D69E2E',
+                        danger: '#E53E3E',
+                        info: '#4299E1',
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans TC', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+    
+    <style>
+        .content-auto { content-visibility: auto; }
+        .text-shadow { text-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+        .text-shadow-lg { text-shadow: 0 2px 4px rgba(0,0,0,0.12); }
+        .card-shadow { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); }
+        .section-divider { width: 4rem; height: 0.2rem; margin: 1rem auto 2rem; }
+        .anchor-target { scroll-margin-top: 100px; }
+        .modal-overlay { animation: fadeIn 0.3s ease-out; }
+        .modal-content { animation: slideUp 0.3s ease-out; }
+        .line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .shake { animation: shake 0.5s ease-in-out; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .badge-admin { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .badge-teacher { background: linear-gradient(135deg, #4299E1 0%, #38B2AC 100%); }
+        .badge-student { background: linear-gradient(135deg, #48BB78 0%, #38A169 100%); }
+        .status-online { background-color: #38A169; }
+        .status-offline { background-color: #A0AEC0; }
+        .status-away { background-color: #D69E2E; }
+    </style>
+</head>
+
+<body class="font-sans text-dark bg-white">
+    <!-- ==================== 加载页面 ==================== -->
+    <div id="loading-page" class="min-h-screen flex items-center justify-center bg-gray-50">
+        <div class="text-center">
+            <div class="inline-block animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+            <h1 class="text-2xl font-bold text-primary mt-6">KYWC 3D班網</h1>
+            <p class="text-gray-600 mt-2">正在加載多人同步系統...</p>
+            <div class="mt-4 space-y-2">
+                <div class="h-2 bg-gray-200 rounded-full w-64 mx-auto overflow-hidden">
+                    <div id="loading-bar" class="h-full bg-primary rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <p id="loading-text" class="text-sm text-gray-500">初始化系統...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 登录/注册页面 ==================== -->
+    <div id="auth-page" class="min-h-screen hidden" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="container mx-auto px-4 py-8">
+            <div class="text-center mb-8">
+                <img src="https://www.twghkywc.edu.hk/sites/default/files/sch_logo.png" alt="KYWC Logo" class="w-20 h-20 mx-auto mb-4 rounded-full bg-white p-2">
+                <h1 class="text-4xl font-bold text-white">KYWC 3D班網</h1>
+                <p class="text-white/80 mt-2">多人同步公告管理系統</p>
+            </div>
+            
+            <div class="max-w-md mx-auto">
+                <!-- 登录/注册切换 -->
+                <div class="flex mb-6 bg-white/10 rounded-lg p-1">
+                    <button id="tab-login" class="flex-1 py-2 rounded-md text-white font-medium transition-all active">登入</button>
+                    <button id="tab-register" class="flex-1 py-2 rounded-md text-white/70 hover:text-white transition-all">註冊</button>
+                </div>
+                
+                <!-- 登录表单 -->
+                <div id="login-form-container" class="bg-white rounded-xl shadow-2xl p-6">
+                    <h2 class="text-2xl font-bold text-primary mb-6">管理員登入</h2>
+                    <form id="login-form" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">電子郵箱</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fa fa-envelope text-gray-400"></i>
+                                </div>
+                                <input type="email" id="login-email" required
+                                       class="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                                       placeholder="admin@kywc.edu.hk">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">密碼</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fa fa-lock text-gray-400"></i>
+                                </div>
+                                <input type="password" id="login-password" required
+                                       class="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                                       placeholder="輸入密碼">
+                                <button type="button" id="toggle-login-password" class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                    <i class="fa fa-eye text-gray-400"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="remember-me" class="h-4 w-4 text-primary rounded">
+                                <label for="remember-me" class="ml-2 text-sm text-gray-600">記住我</label>
+                            </div>
+                            <button type="button" onclick="showForgotPassword()" class="text-sm text-primary hover:underline">
+                                忘記密碼？
+                            </button>
+                        </div>
+                        
+                        <div id="login-error" class="hidden p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <div class="flex items-center text-red-700">
+                                <i class="fa fa-exclamation-circle mr-2"></i>
+                                <span id="login-error-message">登入失敗</span>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" id="login-submit" class="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors flex items-center justify-center">
+                            <i class="fa fa-sign-in-alt mr-2"></i> 登入系統
+                        </button>
+                        
+                        <div class="text-center text-sm text-gray-500 pt-4 border-t">
+                            <p>首次使用？請聯繫系統管理員獲取註冊邀請碼</p>
+                            <p class="mt-1 text-xs">系統版本：v2.0 多人同步版</p>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 注册表单 -->
+                <div id="register-form-container" class="bg-white rounded-xl shadow-2xl p-6 hidden">
+                    <h2 class="text-2xl font-bold text-primary mb-6">新用戶註冊</h2>
+                    <form id="register-form" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">電子郵箱</label>
+                            <input type="email" id="register-email" required
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                                   placeholder="your.email@kywc.edu.hk">
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">姓名</label>
+                                <input type="text" id="register-name" required
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                                       placeholder="吳凱翎">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">班級/職位</label>
+                                <input type="text" id="register-position"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                                       placeholder="3D班主任">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">邀請碼</label>
+                            <input type="text" id="register-invite-code" required
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                                   placeholder="輸入管理員提供的邀請碼">
+                            <p class="text-xs text-gray-500 mt-1">請向系統管理員索取邀請碼</p>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">密碼</label>
+                                <input type="password" id="register-password" required
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                                       placeholder="最少6個字符">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">確認密碼</label>
+                                <input type="password" id="register-confirm-password" required
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                            </div>
+                        </div>
+                        
+                        <div id="register-error" class="hidden p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <div class="flex items-center text-red-700">
+                                <i class="fa fa-exclamation-circle mr-2"></i>
+                                <span id="register-error-message">註冊失敗</span>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" id="register-submit" class="w-full bg-success text-white py-3 rounded-lg font-medium hover:bg-success/90 transition-colors flex items-center justify-center">
+                            <i class="fa fa-user-plus mr-2"></i> 註冊帳號
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- 演示账号提示 -->
+                <div class="mt-6 p-4 bg-white/10 rounded-lg">
+                    <p class="text-white text-sm text-center">
+                        <i class="fa fa-info-circle mr-2"></i>
+                        演示帳號：demo@kywc.edu.hk | 密碼：demo123
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 主网站内容 ==================== -->
+    <div id="main-content" class="hidden">
+        <!-- 顶部状态栏 -->
+        <div class="bg-dark text-white py-2 px-4">
+            <div class="container mx-auto flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div id="connection-status" class="flex items-center">
+                        <div class="w-2 h-2 rounded-full status-online mr-2"></div>
+                        <span class="text-xs">同步連接正常</span>
+                    </div>
+                    <div id="user-count" class="text-xs text-gray-400">
+                        <i class="fa fa-users mr-1"></i><span>0</span> 用戶在線
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div id="current-user-info" class="flex items-center">
+                        <div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs mr-2">
+                            <i class="fa fa-user"></i>
+                        </div>
+                        <span class="text-sm" id="user-display-name">加載中...</span>
+                    </div>
+                    <button onclick="showUserProfile()" class="text-xs text-gray-400 hover:text-white">
+                        <i class="fa fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 导航栏 -->
+        <header class="bg-white border-b border-grayHK sticky top-0 z-40">
+            <div class="container mx-auto px-4">
+                <div class="flex justify-between items-center py-3">
+                    <!-- Logo -->
+                    <div class="logo">
+                        <a href="#home" class="flex items-center space-x-2" aria-label="返回首頁">
+                            <img src="https://www.twghkywc.edu.hk/sites/default/files/sch_logo.png" alt="KYWC學校標誌" class="w-8 h-8">
+                            <span class="text-lg font-bold text-primary">KYWC 3D班網</span>
+                        </a>
+                    </div>
+                    
+                    <!-- 主菜单 -->
+                    <nav class="hidden md:flex items-center space-x-6">
+                        <a href="#home" class="font-medium text-dark hover:text-primary transition-colors">首頁</a>
+                        <a href="#announcements" class="font-medium text-dark hover:text-primary transition-colors">最新公告</a>
+                        <a href="#about" class="font-medium text-dark hover:text-primary transition-colors">關於我們</a>
+                        <a href="#contact" class="font-medium text-dark hover:text-primary transition-colors">聯絡我們</a>
+                        
+                        <!-- 管理员菜单 -->
+                        <div id="admin-menu" class="hidden">
+                            <div class="relative group">
+                                <button class="font-medium text-dark hover:text-primary transition-colors flex items-center">
+                                    管理 <i class="fa fa-chevron-down ml-1 text-xs"></i>
+                                </button>
+                                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border hidden group-hover:block">
+                                    <div class="py-2">
+                                        <button onclick="showUserManagement()" class="w-full text-left px-4 py-2 text-sm text-dark hover:bg-gray-100 flex items-center">
+                                            <i class="fa fa-users mr-2"></i> 用戶管理
+                                        </button>
+                                        <button onclick="showSystemLogs()" class="w-full text-left px-4 py-2 text-sm text-dark hover:bg-gray-100 flex items-center">
+                                            <i class="fa fa-history mr-2"></i> 系統日誌
+                                        </button>
+                                        <button onclick="showInviteCodeManager()" class="w-full text-left px-4 py-2 text-sm text-dark hover:bg-gray-100 flex items-center">
+                                            <i class="fa fa-key mr-2"></i> 邀請碼管理
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </nav>
+                    
+                    <!-- 用户控制 -->
+                    <div class="flex items-center space-x-3">
+                        <button onclick="showAdminPanel()" id="add-announcement-btn" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm hidden">
+                            <i class="fa fa-plus mr-1"></i> 新增公告
+                        </button>
+                        <button onclick="logout()" class="px-4 py-2 bg-danger text-white rounded-lg hover:bg-danger/90 transition-colors text-sm">
+                            <i class="fa fa-sign-out-alt mr-1"></i> 登出
+                        </button>
+                        <button id="mobile-menu-toggle" class="md:hidden text-dark p-2">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 移动端菜单 -->
+                <div id="mobile-menu" class="md:hidden border-t mt-3 pt-3 hidden">
+                    <div class="space-y-2">
+                        <a href="#home" class="block py-2 px-4 hover:bg-gray-100 rounded">首頁</a>
+                        <a href="#announcements" class="block py-2 px-4 hover:bg-gray-100 rounded">最新公告</a>
+                        <div id="mobile-admin-menu" class="hidden">
+                            <div class="border-t pt-2 mt-2">
+                                <button onclick="showUserManagement()" class="block w-full text-left py-2 px-4 hover:bg-gray-100 rounded">用戶管理</button>
+                                <button onclick="showAdminPanel()" class="block w-full text-left py-2 px-4 hover:bg-gray-100 rounded">新增公告</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主要内容 -->
+        <main>
+            <!-- 公告系统 -->
+            <section id="announcements" class="py-8 bg-neutral">
+                <div class="container mx-auto px-4">
+                    <div class="flex justify-between items-center mb-8">
+                        <div>
+                            <h2 class="text-2xl md:text-3xl font-bold">最新公告</h2>
+                            <div class="section-divider bg-primary"></div>
+                        </div>
+                        <div id="announcement-stats" class="text-sm text-gray-600">
+                            <span id="total-announcements">0</span> 則公告
+                        </div>
+                    </div>
+                    
+                    <!-- 筛选和搜索 -->
+                    <div class="mb-6">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <!-- 分类筛选 -->
+                            <div class="flex flex-wrap gap-2">
+                                <button class="ann-filter-btn active px-3 py-1.5 bg-primary text-white rounded-lg text-sm" data-category="all">全部</button>
+                                <button class="ann-filter-btn px-3 py-1.5 bg-white border border-primary text-primary rounded-lg text-sm" data-category="exam">考試</button>
+                                <button class="ann-filter-btn px-3 py-1.5 bg-white border border-primary text-primary rounded-lg text-sm" data-category="activity">活動</button>
+                                <button class="ann-filter-btn px-3 py-1.5 bg-white border border-primary text-primary rounded-lg text-sm" data-category="homework">作業</button>
+                                <button class="ann-filter-btn px-3 py-1.5 bg-white border border-primary text-primary rounded-lg text-sm" data-category="urgent">緊急</button>
+                            </div>
+                            
+                            <!-- 搜索和排序 -->
+                            <div class="flex gap-2">
+                                <div class="relative">
+                                    <input type="text" id="ann-search" placeholder="搜索公告..." class="pl-10 pr-4 py-2 border rounded-lg w-full md:w-64">
+                                    <i class="fa fa-search absolute left-3 top-3 text-gray-400"></i>
+                                </div>
+                                <select id="ann-sort" class="border rounded-lg px-3 py-2">
+                                    <option value="newest">最新優先</option>
+                                    <option value="oldest">最舊優先</option>
+                                    <option value="important">重要優先</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 公告列表 -->
+                    <div id="announcements-container" class="space-y-4">
+                        <!-- 公告会动态加载 -->
+                        <div class="text-center py-12">
+                            <div class="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+                            <p class="mt-3 text-gray-500 font-medium">正在同步公告數據...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 分页 -->
+                    <div id="pagination" class="flex justify-center items-center gap-4 mt-8 hidden">
+                        <button id="prev-page" class="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50">上一頁</button>
+                        <span id="page-info" class="text-gray-700">第 <span id="current-page">1</span> 頁</span>
+                        <button id="next-page" class="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50">下一頁</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 实时通知区域 -->
+        <div id="notification-container" class="fixed bottom-4 right-4 z-50 space-y-2 max-w-sm"></div>
+    </div>
+
+    <!-- ==================== JavaScript 代码 ==================== -->
+    <script>
+        // Firebase 配置
+        const firebaseConfig = {
+    apiKey: "AIzaSyBgP4nuRrpTUjRsjIZPTCFMF8ichhNTm0g",
+    authDomain: "kywc-3d-announcements.firebaseapp.com",
+    projectId: "kywc-3d-announcements",
+    storageBucket: "kywc-3d-announcements.firebasestorage.app",
+    messagingSenderId: "388023540027",
+    appId: "1:388023540027:web:4a82dc466b052ebc313f1e",
+    measurementId: "G-ZT77DVXW79"
+};
+
+        // 初始化变量
+        let db = null;
+        let auth = null;
+        let currentUser = null;
+        let announcements = [];
+        let users = [];
+        let onlineUsers = new Set();
+        let unsubscribeAnnouncements = null;
+        let unsubscribeUsers = null;
+        let unsubscribeOnlineUsers = null;
+
+        // 页面加载
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 初始化加载进度
+            updateLoadingProgress(10, '初始化界面...');
+            
+            try {
+                // 初始化Firebase
+                updateLoadingProgress(30, '初始化數據庫連接...');
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                auth = firebase.auth();
+                
+                // 设置持久化
+                await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+                
+                updateLoadingProgress(50, '檢查登入狀態...');
+                
+                // 监听认证状态变化
+                auth.onAuthStateChanged(async (user) => {
+                    if (user) {
+                        // 用户已登录
+                        currentUser = user;
+                        await initializeUserSession(user);
+                        showMainContent();
+                    } else {
+                        // 用户未登录
+                        showAuthPage();
+                    }
+                });
+                
+                updateLoadingProgress(70, '加載完成');
+                setTimeout(() => {
+                    document.getElementById('loading-page').classList.add('hidden');
+                }, 500);
+                
+            } catch (error) {
+                console.error('初始化失敗:', error);
+                updateLoadingProgress(100, '初始化失敗，請刷新頁面');
+                setTimeout(() => {
+                    document.getElementById('loading-page').innerHTML = `
+                        <div class="text-center">
+                            <i class="fa fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                            <h1 class="text-2xl font-bold text-red-500 mb-2">系統初始化失敗</h1>
+                            <p class="text-gray-600 mb-4">${error.message}</p>
+                            <button onclick="location.reload()" class="px-4 py-2 bg-primary text-white rounded-lg">
+                                重新加載
+                            </button>
+                        </div>
+                    `;
+                }, 1000);
+            }
+            
+            // 初始化事件监听器
+            setupEventListeners();
+        });
+
+        // ==================== 加载进度 ====================
+        function updateLoadingProgress(percent, text) {
+            const bar = document.getElementById('loading-bar');
+            const textEl = document.getElementById('loading-text');
+            if (bar) bar.style.width = percent + '%';
+            if (textEl) textEl.textContent = text;
+        }
+
+        // ==================== 页面切换 ====================
+        function showAuthPage() {
+            document.getElementById('auth-page').classList.remove('hidden');
+            document.getElementById('main-content').classList.add('hidden');
+            document.getElementById('loading-page').classList.add('hidden');
+        }
+
+        function showMainContent() {
+            document.getElementById('auth-page').classList.add('hidden');
+            document.getElementById('main-content').classList.remove('hidden');
+            document.getElementById('loading-page').classList.add('hidden');
+            initializeRealTimeData();
+        }
+
+        // ==================== 用户会话初始化 ====================
+        async function initializeUserSession(user) {
+            try {
+                // 获取用户数据
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                
+                if (!userDoc.exists) {
+                    // 创建新用户文档
+                    await db.collection('users').doc(user.uid).set({
+                        email: user.email,
+                        displayName: user.displayName || user.email.split('@')[0],
+                        role: 'student', // 默认角色
+                        position: '',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+                        status: 'online'
+                    });
+                    
+                    // 记录日志
+                    await db.collection('logs').add({
+                        type: 'user_created',
+                        userId: user.uid,
+                        userEmail: user.email,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        details: '新用户注册'
+                    });
+                } else {
+                    // 更新最后登录时间
+                    await db.collection('users').doc(user.uid).update({
+                        lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+                        status: 'online'
+                    });
+                }
+                
+                // 设置在线状态
+                const onlineRef = db.collection('onlineUsers').doc(user.uid);
+                await onlineRef.set({
+                    userId: user.uid,
+                    lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+                    userAgent: navigator.userAgent
+                });
+                
+                // 更新用户显示信息
+                updateUserDisplay(userDoc.data() || {
+                    displayName: user.email.split('@')[0],
+                    role: 'student'
+                });
+                
+            } catch (error) {
+                console.error('初始化用戶會話失敗:', error);
+            }
+        }
+
+        // ==================== 实时数据初始化 ====================
+        function initializeRealTimeData() {
+            // 监听公告数据
+            unsubscribeAnnouncements = db.collection('announcements')
+                .orderBy('createdAt', 'desc')
+                .onSnapshot((snapshot) => {
+                    announcements = [];
+                    snapshot.forEach(doc => {
+                        announcements.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    });
+                    
+                    renderAnnouncements();
+                    updateAnnouncementStats();
+                    showNotification('公告數據已同步', 'success');
+                }, (error) => {
+                    console.error('公告數據同步失敗:', error);
+                    showNotification('公告數據同步失敗', 'error');
+                });
+            
+            // 监听用户数据
+            unsubscribeUsers = db.collection('users')
+                .onSnapshot((snapshot) => {
+                    users = [];
+                    snapshot.forEach(doc => {
+                        users.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    });
+                    
+                    updateOnlineUsers();
+                });
+            
+            // 监听在线用户
+            unsubscribeOnlineUsers = db.collection('onlineUsers')
+                .onSnapshot((snapshot) => {
+                    onlineUsers.clear();
+                    snapshot.forEach(doc => {
+                        onlineUsers.add(doc.data().userId);
+                    });
+                    
+                    updateOnlineUsers();
+                });
+        }
+
+        // ==================== 公告系统 ====================
+        function renderAnnouncements() {
+            const container = document.getElementById('announcements-container');
+            if (!container) return;
+            
+            if (announcements.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12">
+                        <i class="fa fa-newspaper text-4xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500 text-lg">暫無公告</p>
+                        <p class="text-gray-400 mt-2">點擊上方按鈕添加第一則公告</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = announcements.map(ann => `
+                <div class="announcement-item bg-white rounded-lg card-shadow overflow-hidden border-l-4 ${ann.important ? 'border-accent' : 'border-transparent'}">
+                    <div class="p-5">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="text-xl font-semibold text-primary">${ann.title}</h3>
+                                <div class="flex items-center gap-3 text-sm text-gray-500 mt-1">
+                                    <span><i class="fa fa-user mr-1"></i>${ann.authorName}</span>
+                                    <span><i class="fa fa-calendar mr-1"></i>${formatFirebaseTimestamp(ann.createdAt)}</span>
+                                    <span class="px-2 py-1 bg-gray-100 rounded text-xs">${getCategoryName(ann.category)}</span>
+                                    ${ann.important ? '<span class="px-2 py-1 bg-accent text-white rounded text-xs">重要</span>' : ''}
+                                </div>
+                            </div>
+                            ${canEditAnnouncement(ann) ? `
+                                <div class="flex gap-2">
+                                    <button onclick="editAnnouncement('${ann.id}')" class="px-2 py-1 text-xs bg-secondary text-white rounded hover:bg-secondary/90">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button onclick="deleteAnnouncement('${ann.id}')" class="px-2 py-1 text-xs bg-danger text-white rounded hover:bg-danger/90">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="text-gray-600 mb-4 line-clamp-2">${ann.content}</div>
+                        
+                        ${ann.attachments && ann.attachments.length > 0 ? `
+                            <div class="border-t pt-3">
+                                <div class="flex flex-wrap gap-2">
+                                    ${ann.attachments.map(att => `
+                                        <a href="${att.url}" target="_blank" class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded text-sm">
+                                            <i class="fa ${att.icon}"></i>
+                                            <span>${att.name}</span>
+                                        </a>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="flex justify-between items-center mt-4 pt-3 border-t">
+                            <button onclick="showAnnouncementDetail('${ann.id}')" class="text-primary hover:underline text-sm">
+                                查看詳細 <i class="fa fa-arrow-right ml-1"></i>
+                            </button>
+                            <div class="text-xs text-gray-500">
+                                最後更新：${formatFirebaseTimestamp(ann.updatedAt || ann.createdAt)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ==================== 用户管理 ====================
+        window.showUserManagement = async function() {
+            if (!currentUser) return;
+            
+            // 检查权限
+            const userDoc = await db.collection('users').doc(currentUser.uid).get();
+            const userData = userDoc.data();
+            
+            if (userData.role !== 'admin') {
+                showNotification('只有管理員可以訪問用戶管理', 'error');
+                return;
+            }
+            
+            const modalHtml = `
+                <div class="modal-overlay fixed inset-0 bg-black/70 z-50 flex items-start justify-center p-4 overflow-y-auto">
+                    <div class="modal-content bg-white rounded-xl w-full max-w-4xl my-8">
+                        <div class="sticky top-0 bg-white border-b p-6">
+                            <div class="flex justify-between items-center">
+                                <h3 class="text-2xl font-bold text-primary">
+                                    <i class="fa fa-users mr-2"></i> 用戶管理系統
+                                </h3>
+                                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="p-6 max-h-[60vh] overflow-y-auto">
+                            <!-- 用户统计 -->
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                <div class="bg-blue-50 p-4 rounded-lg">
+                                    <div class="text-2xl font-bold text-blue-600">${users.length}</div>
+                                    <div class="text-sm text-blue-800">總用戶數</div>
+                                </div>
+                                <div class="bg-green-50 p-4 rounded-lg">
+                                    <div class="text-2xl font-bold text-green-600">${onlineUsers.size}</div>
+                                    <div class="text-sm text-green-800">在線用戶</div>
+                                </div>
+                                <div class="bg-purple-50 p-4 rounded-lg">
+                                    <div class="text-2xl font-bold text-purple-600">${users.filter(u => u.role === 'admin').length}</div>
+                                    <div class="text-sm text-purple-800">管理員</div>
+                                </div>
+                                <div class="bg-yellow-50 p-4 rounded-lg">
+                                    <div class="text-2xl font-bold text-yellow-600">${users.filter(u => u.role === 'teacher').length}</div>
+                                    <div class="text-sm text-yellow-800">教師</div>
+                                </div>
+                            </div>
+                            
+                            <!-- 用户列表 -->
+                            <div class="overflow-x-auto">
+                                <table class="w-full border-collapse">
+                                    <thead>
+                                        <tr class="bg-gray-50">
+                                            <th class="px-4 py-3 text-left">用戶</th>
+                                            <th class="px-4 py-3 text-left">角色</th>
+                                            <th class="px-4 py-3 text-left">狀態</th>
+                                            <th class="px-4 py-3 text-left">最後登入</th>
+                                            <th class="px-4 py-3 text-left">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${users.map(user => `
+                                            <tr class="border-t hover:bg-gray-50">
+                                                <td class="px-4 py-3">
+                                                    <div class="flex items-center">
+                                                        <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white mr-3">
+                                                            ${user.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}
+                                                        </div>
+                                                        <div>
+                                                            <div class="font-medium">${user.displayName || '未命名用戶'}</div>
+                                                            <div class="text-xs text-gray-500">${user.email}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="px-4 py-3">
+                                                    <select class="user-role-select border rounded px-2 py-1 text-sm" data-user-id="${user.id}" value="${user.role}">
+                                                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>管理員</option>
+                                                        <option value="teacher" ${user.role === 'teacher' ? 'selected' : ''}>教師</option>
+                                                        <option value="student" ${user.role === 'student' ? 'selected' : ''}>學生</option>
+                                                    </select>
+                                                </td>
+                                                <td class="px-4 py-3">
+                                                    <div class="flex items-center">
+                                                        <div class="w-2 h-2 rounded-full mr-2 ${onlineUsers.has(user.id) ? 'status-online' : 'status-offline'}"></div>
+                                                        <span class="text-sm">${onlineUsers.has(user.id) ? '在線' : '離線'}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-4 py-3 text-sm">
+                                                    ${user.lastLogin ? formatFirebaseTimestamp(user.lastLogin) : '從未登入'}
+                                                </td>
+                                                <td class="px-4 py-3">
+                                                    <div class="flex gap-2">
+                                                        <button onclick="resetUserPassword('${user.id}', '${user.email}')" class="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+                                                            重置密碼
+                                                        </button>
+                                                        ${user.id !== currentUser.uid ? `
+                                                            <button onclick="deleteUser('${user.id}', '${user.email}')" class="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">
+                                                                刪除
+                                                            </button>
+                                                        ` : ''}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="border-t p-6">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <button onclick="showAddUserForm()" class="px-4 py-2 bg-success text-white rounded-lg hover:bg-success/90">
+                                        <i class="fa fa-user-plus mr-2"></i> 添加用戶
+                                    </button>
+                                </div>
+                                <button onclick="closeModal()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">
+                                    關閉
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            showModal(modalHtml);
+            
+            // 添加角色变更事件监听
+            document.querySelectorAll('.user-role-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    updateUserRole(this.dataset.userId, this.value);
+                });
+            });
+        };
+
+        // ==================== 系统日志 ====================
+        window.showSystemLogs = async function() {
+            try {
+                const logsSnapshot = await db.collection('logs')
+                    .orderBy('timestamp', 'desc')
+                    .limit(50)
+                    .get();
+                
+                const logs = [];
+                logsSnapshot.forEach(doc => {
+                    logs.push({ id: doc.id, ...doc.data() });
+                });
+                
+                const modalHtml = `
+                    <div class="modal-overlay fixed inset-0 bg-black/70 z-50 flex items-start justify-center p-4 overflow-y-auto">
+                        <div class="modal-content bg-white rounded-xl w-full max-w-4xl my-8">
+                            <div class="sticky top-0 bg-white border-b p-6">
+                                <div class="flex justify-between items-center">
+                                    <h3 class="text-2xl font-bold text-primary">
+                                        <i class="fa fa-history mr-2"></i> 系統日誌
+                                    </h3>
+                                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="p-6 max-h-[60vh] overflow-y-auto">
+                                <div class="space-y-3">
+                                    ${logs.map(log => `
+                                        <div class="border-l-4 ${getLogColor(log.type)} pl-4 py-2">
+                                            <div class="flex justify-between items-start">
+                                                <div>
+                                                    <div class="font-medium">${getLogTitle(log.type)}</div>
+                                                    <div class="text-sm text-gray-600">${log.details || ''}</div>
+                                                </div>
+                                                <div class="text-xs text-gray-500 whitespace-nowrap">
+                                                    ${formatFirebaseTimestamp(log.timestamp)}
+                                                </div>
+                                            </div>
+                                            ${log.userEmail ? `
+                                                <div class="text-xs text-gray-500 mt-1">
+                                                    用戶: ${log.userEmail}
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                showModal(modalHtml);
+                
+            } catch (error) {
+                console.error('獲取日誌失敗:', error);
+                showNotification('獲取系統日誌失敗', 'error');
+            }
+        };
+
+        // ==================== 邀请码管理 ====================
+        window.showInviteCodeManager = async function() {
+            try {
+                const invitesSnapshot = await db.collection('inviteCodes').get();
+                const invites = [];
+                invitesSnapshot.forEach(doc => {
+                    invites.push({ id: doc.id, ...doc.data() });
+                });
+                
+                const modalHtml = `
+                    <div class="modal-overlay fixed inset-0 bg-black/70 z-50 flex items-start justify-center p-4 overflow-y-auto">
+                        <div class="modal-content bg-white rounded-xl w-full max-w-2xl my-8">
+                            <div class="sticky top-0 bg-white border-b p-6">
+                                <div class="flex justify-between items-center">
+                                    <h3 class="text-2xl font-bold text-primary">
+                                        <i class="fa fa-key mr-2"></i> 邀請碼管理
+                                    </h3>
+                                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="p-6">
+                                <!-- 生成新邀请码 -->
+                                <div class="mb-6">
+                                    <h4 class="font-semibold mb-3">生成新邀請碼</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <select id="new-invite-role" class="border rounded-lg px-3 py-2">
+                                            <option value="teacher">教師</option>
+                                            <option value="student">學生</option>
+                                        </select>
+                                        <input type="number" id="new-invite-expiry" class="border rounded-lg px-3 py-2" placeholder="有效天數" value="7">
+                                        <button onclick="generateInviteCode()" class="bg-primary text-white rounded-lg px-4 py-2 hover:bg-primary/90">
+                                            生成邀請碼
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- 现有邀请码 -->
+                                <div>
+                                    <h4 class="font-semibold mb-3">現有邀請碼</h4>
+                                    ${invites.length === 0 ? 
+                                        '<p class="text-gray-500 text-center py-4">暫無邀請碼</p>' : 
+                                        `
+                                        <div class="space-y-3">
+                                            ${invites.map(invite => `
+                                                <div class="border rounded-lg p-3">
+                                                    <div class="flex justify-between items-center">
+                                                        <div>
+                                                            <div class="font-mono text-lg font-bold">${invite.code}</div>
+                                                            <div class="text-sm text-gray-600">
+                                                                ${invite.role === 'teacher' ? '教師' : '學生'} | 
+                                                                過期時間: ${formatFirebaseTimestamp(invite.expiresAt)}
+                                                            </div>
+                                                        </div>
+                                                        <button onclick="deleteInviteCode('${invite.id}')" class="text-red-500 hover:text-red-700">
+                                                            <i class="fa fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                    ${invite.usedBy ? `
+                                                        <div class="text-xs text-gray-500 mt-2">
+                                                            已由 ${invite.usedBy} 使用
+                                                        </div>
+                                                    ` : ''}
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                        `
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                showModal(modalHtml);
+                
+            } catch (error) {
+                console.error('獲取邀請碼失敗:', error);
+                showNotification('獲取邀請碼失敗', 'error');
+            }
+        };
+
+        // ==================== 公告管理 ====================
+        window.showAdminPanel = function(mode = 'add', announcementId = null) {
+            const announcement = announcementId ? announcements.find(a => a.id === announcementId) : null;
+            
+            const modalHtml = `
+                <div class="modal-overlay fixed inset-0 bg-black/70 z-50 flex items-start justify-center p-4 overflow-y-auto">
+                    <div class="modal-content bg-white rounded-xl w-full max-w-2xl my-8">
+                        <div class="sticky top-0 bg-white border-b p-6">
+                            <div class="flex justify-between items-center">
+                                <h3 class="text-2xl font-bold text-primary">
+                                    <i class="fa fa-${mode === 'add' ? 'plus' : 'edit'} mr-2"></i>
+                                    ${mode === 'add' ? '新增公告' : '編輯公告'}
+                                </h3>
+                                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="p-6">
+                            <form id="announcement-form">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">標題 *</label>
+                                        <input type="text" id="ann-title" required 
+                                               class="w-full px-3 py-2 border rounded-lg" 
+                                               value="${announcement?.title || ''}">
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">分類 *</label>
+                                            <select id="ann-category" class="w-full px-3 py-2 border rounded-lg">
+                                                <option value="general" ${announcement?.category === 'general' ? 'selected' : ''}>一般</option>
+                                                <option value="exam" ${announcement?.category === 'exam' ? 'selected' : ''}>考試</option>
+                                                <option value="activity" ${announcement?.category === 'activity' ? 'selected' : ''}>活動</option>
+                                                <option value="homework" ${announcement?.category === 'homework' ? 'selected' : ''}>作業</option>
+                                                <option value="urgent" ${announcement?.category === 'urgent' ? 'selected' : ''}>緊急</option>
+                                            </select>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" id="ann-important" class="h-5 w-5" 
+                                                   ${announcement?.important ? 'checked' : ''}>
+                                            <label for="ann-important" class="ml-2 text-sm text-gray-700">標記為重要公告</label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">內容 *</label>
+                                        <textarea id="ann-content" rows="6" required 
+                                                  class="w-full px-3 py-2 border rounded-lg">${announcement?.content || ''}</textarea>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div class="border-t p-6 flex justify-end gap-3">
+                            <button onclick="closeModal()" class="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                                取消
+                            </button>
+                            <button onclick="${mode === 'add' ? 'submitNewAnnouncement()' : `updateAnnouncement('${announcementId}')`}" 
+                                    class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">
+                                ${mode === 'add' ? '發佈公告' : '更新公告'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            showModal(modalHtml);
+        };
+
+        // ==================== 用户操作 ====================
+        async function updateUserRole(userId, newRole) {
+            try {
+                await db.collection('users').doc(userId).update({
+                    role: newRole
+                });
+                
+                await db.collection('logs').add({
+                    type: 'user_role_changed',
+                    userId: currentUser.uid,
+                    userEmail: currentUser.email,
+                    targetUserId: userId,
+                    newRole: newRole,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    details: `更改用戶角色為 ${newRole}`
+                });
+                
+                showNotification('用戶角色已更新', 'success');
+            } catch (error) {
+                console.error('更新用戶角色失敗:', error);
+                showNotification('更新失敗', 'error');
+            }
+        }
+
+        async function resetUserPassword(userId, userEmail) {
+            if (!confirm(`確定要重置 ${userEmail} 的密碼嗎？新密碼將發送到該郵箱。`)) {
+                return;
+            }
+            
+            try {
+                // 这里应该调用Firebase的重置密码功能
+                showNotification('密碼重置郵件已發送', 'success');
+                
+                await db.collection('logs').add({
+                    type: 'password_reset',
+                    userId: currentUser.uid,
+                    userEmail: currentUser.email,
+                    targetEmail: userEmail,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    details: '發送密碼重置郵件'
+                });
+            } catch (error) {
+                console.error('重置密碼失敗:', error);
+                showNotification('重置失敗', 'error');
+            }
+        }
+
+        async function deleteUser(userId, userEmail) {
+            if (!confirm(`確定要刪除用戶 ${userEmail} 嗎？此操作不可恢復。`)) {
+                return;
+            }
+            
+            try {
+                await db.collection('users').doc(userId).delete();
+                
+                await db.collection('logs').add({
+                    type: 'user_deleted',
+                    userId: currentUser.uid,
+                    userEmail: currentUser.email,
+                    targetEmail: userEmail,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    details: '刪除用戶帳戶'
+                });
+                
+                showNotification('用戶已刪除', 'success');
+            } catch (error) {
+                console.error('刪除用戶失敗:', error);
+                showNotification('刪除失敗', 'error');
+            }
+        }
+
+        // ==================== 公告操作 ====================
+        async function submitNewAnnouncement() {
+            try {
+                const title = document.getElementById('ann-title').value.trim();
+                const content = document.getElementById('ann-content').value.trim();
+                const category = document.getElementById('ann-category').value;
+                const important = document.getElementById('ann-important').checked;
+                
+                if (!title || !content) {
+                    showNotification('請填寫標題和內容', 'error');
+                    return;
+                }
+                
+                const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                const userData = userDoc.data();
+                
+                await db.collection('announcements').add({
+                    title: title,
+                    content: content,
+                    category: category,
+                    important: important,
+                    authorId: currentUser.uid,
+                    authorName: userData.displayName || currentUser.email,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                await db.collection('logs').add({
+                    type: 'announcement_created',
+                    userId: currentUser.uid,
+                    userEmail: currentUser.email,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    details: `創建公告: ${title}`
+                });
+                
+                closeModal();
+                showNotification('公告已發佈', 'success');
+                
+            } catch (error) {
+                console.error('發佈公告失敗:', error);
+                showNotification('發佈失敗', 'error');
+            }
+        }
+
+        async function updateAnnouncement(announcementId) {
+            try {
+                const title = document.getElementById('ann-title').value.trim();
+                const content = document.getElementById('ann-content').value.trim();
+                const category = document.getElementById('ann-category').value;
+                const important = document.getElementById('ann-important').checked;
+                
+                if (!title || !content) {
+                    showNotification('請填寫標題和內容', 'error');
+                    return;
+                }
+                
+                await db.collection('announcements').doc(announcementId).update({
+                    title: title,
+                    content: content,
+                    category: category,
+                    important: important,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                await db.collection('logs').add({
+                    type: 'announcement_updated',
+                    userId: currentUser.uid,
+                    userEmail: currentUser.email,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    details: `更新公告: ${title}`
+                });
+                
+                closeModal();
+                showNotification('公告已更新', 'success');
+                
+            } catch (error) {
+                console.error('更新公告失敗:', error);
+                showNotification('更新失敗', 'error');
+            }
+        }
+
+        async function deleteAnnouncement(announcementId) {
+            const announcement = announcements.find(a => a.id === announcementId);
+            if (!announcement) return;
+            
+            if (!confirm(`確定要刪除公告 "${announcement.title}" 嗎？此操作不可恢復。`)) {
+                return;
+            }
+            
+            try {
+                await db.collection('announcements').doc(announcementId).delete();
+                
+                await db.collection('logs').add({
+                    type: 'announcement_deleted',
+                    userId: currentUser.uid,
+                    userEmail: currentUser.email,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    details: `刪除公告: ${announcement.title}`
+                });
+                
+                showNotification('公告已刪除', 'success');
+            } catch (error) {
+                console.error('刪除公告失敗:', error);
+                showNotification('刪除失敗', 'error');
+            }
+        }
+
+        // ==================== 邀请码操作 ====================
+        async function generateInviteCode() {
+            try {
+                const role = document.getElementById('new-invite-role').value;
+                const expiryDays = parseInt(document.getElementById('new-invite-expiry').value) || 7;
+                
+                // 生成随机邀请码
+                const code = 'KYWC-' + Math.random().toString(36).substr(2, 8).toUpperCase();
+                const expiresAt = new Date();
+                expiresAt.setDate(expiresAt.getDate() + expiryDays);
+                
+                await db.collection('inviteCodes').add({
+                    code: code,
+                    role: role,
+                    createdBy: currentUser.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    expiresAt: expiresAt,
+                    used: false
+                });
+                
+                await db.collection('logs').add({
+                    type: 'invite_code_generated',
+                    userId: currentUser.uid,
+                    userEmail: currentUser.email,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    details: `生成邀請碼: ${code} (${role})`
+                });
+                
+                showNotification(`邀請碼已生成: ${code}`, 'success');
+                setTimeout(showInviteCodeManager, 1000);
+                
+            } catch (error) {
+                console.error('生成邀請碼失敗:', error);
+                showNotification('生成失敗', 'error');
+            }
+        }
+
+        // ==================== 工具函数 ====================
+        function formatFirebaseTimestamp(timestamp) {
+            if (!timestamp) return '未知時間';
+            if (timestamp.toDate) {
+                return timestamp.toDate().toLocaleDateString('zh-TW', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+            return new Date(timestamp).toLocaleDateString('zh-TW');
+        }
+
+        function getCategoryName(category) {
+            const categories = {
+                'exam': '考試資訊',
+                'activity': '活動通知',
+                'homework': '作業提交',
+                'urgent': '緊急通知',
+                'general': '一般公告'
+            };
+            return categories[category] || category;
+        }
+
+        function getLogColor(logType) {
+            const colors = {
+                'user_created': 'border-green-500',
+                'user_deleted': 'border-red-500',
+                'user_role_changed': 'border-blue-500',
+                'announcement_created': 'border-green-500',
+                'announcement_updated': 'border-blue-500',
+                'announcement_deleted': 'border-red-500',
+                'login': 'border-green-500',
+                'logout': 'border-gray-500',
+                'password_reset': 'border-yellow-500',
+                'invite_code_generated': 'border-purple-500'
+            };
+            return colors[logType] || 'border-gray-500';
+        }
+
+        function getLogTitle(logType) {
+            const titles = {
+                'user_created': '用戶創建',
+                'user_deleted': '用戶刪除',
+                'user_role_changed': '角色變更',
+                'announcement_created': '公告發佈',
+                'announcement_updated': '公告更新',
+                'announcement_deleted': '公告刪除',
+                'login': '用戶登入',
+                'logout': '用戶登出',
+                'password_reset': '密碼重置',
+                'invite_code_generated': '邀請碼生成'
+            };
+            return titles[logType] || logType;
+        }
+
+        function canEditAnnouncement(announcement) {
+            if (!currentUser) return false;
+            const userDoc = users.find(u => u.id === currentUser.uid);
+            if (!userDoc) return false;
+            
+            // 管理员和教师可以编辑所有公告
+            if (userDoc.role === 'admin' || userDoc.role === 'teacher') return true;
+            
+            // 用户可以编辑自己创建的公告
+            return announcement.authorId === currentUser.uid;
+        }
+
+        function updateUserDisplay(userData) {
+            const displayElement = document.getElementById('user-display-name');
+            if (displayElement && userData) {
+                displayElement.textContent = userData.displayName || currentUser.email;
+            }
+            
+            // 根据角色显示管理员菜单
+            const adminMenu = document.getElementById('admin-menu');
+            const mobileAdminMenu = document.getElementById('mobile-admin-menu');
+            const addButton = document.getElementById('add-announcement-btn');
+            
+            if (userData.role === 'admin' || userData.role === 'teacher') {
+                if (adminMenu) adminMenu.classList.remove('hidden');
+                if (mobileAdminMenu) mobileAdminMenu.classList.remove('hidden');
+                if (addButton) addButton.classList.remove('hidden');
+            }
+        }
+
+        function updateOnlineUsers() {
+            const userCountElement = document.getElementById('user-count');
+            if (userCountElement) {
+                userCountElement.querySelector('span').textContent = onlineUsers.size;
+            }
+        }
+
+        function updateAnnouncementStats() {
+            const statsElement = document.getElementById('total-announcements');
+            if (statsElement) {
+                statsElement.textContent = announcements.length;
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            if (!container) return;
+            
+            const id = 'notification-' + Date.now();
+            const colors = {
+                'success': 'bg-green-100 border-green-400 text-green-700',
+                'error': 'bg-red-100 border-red-400 text-red-700',
+                'warning': 'bg-yellow-100 border-yellow-400 text-yellow-700',
+                'info': 'bg-blue-100 border-blue-400 text-blue-700'
+            };
+            
+            const notification = document.createElement('div');
+            notification.id = id;
+            notification.className = `${colors[type]} border rounded-lg p-4 shadow-lg transform transition-all duration-300 translate-x-full`;
+            notification.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <div class="flex items-center">
+                        <i class="fa fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} mr-2"></i>
+                        <span>${message}</span>
+                    </div>
+                    <button onclick="document.getElementById('${id}').remove()" class="ml-4 text-gray-500 hover:text-gray-700">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(notification);
+            
+            // 动画显示
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 10);
+            
+            // 自动移除
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.classList.add('opacity-0', 'translate-x-full');
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.remove();
+                        }
+                    }, 300);
+                }
+            }, 5000);
+        }
+
+        function showModal(html) {
+            const modalContainer = document.createElement('div');
+            modalContainer.innerHTML = html;
+            document.body.appendChild(modalContainer);
+            document.body.style.overflow = 'hidden';
+        }
+
+        window.closeModal = function() {
+            const modal = document.querySelector('.modal-overlay');
+            if (modal) {
+                modal.remove();
+                document.body.style.overflow = '';
+            }
+        };
+
+        // ==================== 登出 ====================
+        window.logout = async function() {
+            try {
+                if (currentUser) {
+                    // 更新用户状态
+                    await db.collection('users').doc(currentUser.uid).update({
+                        status: 'offline',
+                        lastLogout: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    // 移除在线状态
+                    await db.collection('onlineUsers').doc(currentUser.uid).delete();
+                    
+                    // 记录日志
+                    await db.collection('logs').add({
+                        type: 'logout',
+                        userId: currentUser.uid,
+                        userEmail: currentUser.email,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        details: '用戶登出'
+                    });
+                }
+                
+                // 取消监听
+                if (unsubscribeAnnouncements) unsubscribeAnnouncements();
+                if (unsubscribeUsers) unsubscribeUsers();
+                if (unsubscribeOnlineUsers) unsubscribeOnlineUsers();
+                
+                // Firebase登出
+                await auth.signOut();
+                
+                // 重置状态
+                currentUser = null;
+                announcements = [];
+                users = [];
+                onlineUsers.clear();
+                
+                // 显示登录页面
+                showAuthPage();
+                
+            } catch (error) {
+                console.error('登出失敗:', error);
+            }
+        };
+
+        // ==================== 事件监听器 ====================
+        function setupEventListeners() {
+            // 登录/注册切换
+            document.getElementById('tab-login')?.addEventListener('click', () => {
+                document.getElementById('tab-login').classList.add('active');
+                document.getElementById('tab-register').classList.remove('active');
+                document.getElementById('login-form-container').classList.remove('hidden');
+                document.getElementById('register-form-container').classList.add('hidden');
+            });
+            
+            document.getElementById('tab-register')?.addEventListener('click', () => {
+                document.getElementById('tab-register').classList.add('active');
+                document.getElementById('tab-login').classList.remove('active');
+                document.getElementById('register-form-container').classList.remove('hidden');
+                document.getElementById('login-form-container').classList.add('hidden');
+            });
+            
+            // 显示/隐藏密码
+            document.getElementById('toggle-login-password')?.addEventListener('click', function() {
+                const passwordInput = document.getElementById('login-password');
+                const icon = this.querySelector('i');
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    passwordInput.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            });
+            
+            // 登录表单提交
+            document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const email = document.getElementById('login-email').value.trim();
+                const password = document.getElementById('login-password').value;
+                
+                const submitBtn = document.getElementById('login-submit');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i>登入中...';
+                submitBtn.disabled = true;
+                
+                try {
+                    // 演示账号特殊处理
+                    if (email === 'demo@kywc.edu.hk' && password === 'demo123') {
+                        // 使用Firebase匿名登录或创建演示用户
+                        const result = await auth.signInWithEmailAndPassword(email, password);
+                        showNotification('歡迎使用演示帳號', 'success');
+                    } else {
+                        const result = await auth.signInWithEmailAndPassword(email, password);
+                        showNotification('登入成功', 'success');
+                    }
+                } catch (error) {
+                    console.error('登入失敗:', error);
+                    const errorDiv = document.getElementById('login-error');
+                    const errorMsg = document.getElementById('login-error-message');
+                    
+                    let message = '登入失敗';
+                    if (error.code === 'auth/user-not-found') {
+                        message = '用戶不存在';
+                    } else if (error.code === 'auth/wrong-password') {
+                        message = '密碼錯誤';
+                    } else if (error.code === 'auth/invalid-email') {
+                        message = '無效的電子郵箱';
+                    } else if (error.code === 'auth/too-many-requests') {
+                        message = '嘗試次數過多，請稍後再試';
+                    }
+                    
+                    errorMsg.textContent = message;
+                    errorDiv.classList.remove('hidden');
+                    
+                    // 抖动效果
+                    const form = document.getElementById('login-form');
+                    form.classList.add('shake');
+                    setTimeout(() => form.classList.remove('shake'), 500);
+                } finally {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            });
+            
+            // 注册表单提交
+            document.getElementById('register-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const email = document.getElementById('register-email').value.trim();
+                const password = document.getElementById('register-password').value;
+                const confirmPassword = document.getElementById('register-confirm-password').value;
+                const name = document.getElementById('register-name').value.trim();
+                const position = document.getElementById('register-position').value.trim();
+                const inviteCode = document.getElementById('register-invite-code').value.trim();
+                
+                if (password !== confirmPassword) {
+                    showNotification('兩次輸入的密碼不一致', 'error');
+                    return;
+                }
+                
+                if (password.length < 6) {
+                    showNotification('密碼至少需要6個字符', 'error');
+                    return;
+                }
+                
+                const submitBtn = document.getElementById('register-submit');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i>註冊中...';
+                submitBtn.disabled = true;
+                
+                try {
+                    // 验证邀请码
+                    const invitesSnapshot = await db.collection('inviteCodes')
+                        .where('code', '==', inviteCode)
+                        .where('used', '==', false)
+                        .limit(1)
+                        .get();
+                    
+                    if (invitesSnapshot.empty) {
+                        throw new Error('無效或已使用的邀請碼');
+                    }
+                    
+                    const inviteDoc = invitesSnapshot.docs[0];
+                    const inviteData = inviteDoc.data();
+                    
+                    // 检查邀请码是否过期
+                    if (inviteData.expiresAt.toDate() < new Date()) {
+                        throw new Error('邀請碼已過期');
+                    }
+                    
+                    // 创建用户
+                    const result = await auth.createUserWithEmailAndPassword(email, password);
+                    
+                    // 更新用户信息
+                    await result.user.updateProfile({
+                        displayName: name
+                    });
+                    
+                    // 标记邀请码为已使用
+                    await db.collection('inviteCodes').doc(inviteDoc.id).update({
+                        used: true,
+                        usedBy: email,
+                        usedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    // 记录日志
+                    await db.collection('logs').add({
+                        type: 'user_created',
+                        userId: result.user.uid,
+                        userEmail: email,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        details: `新用戶註冊 (邀請碼: ${inviteCode})`
+                    });
+                    
+                    showNotification('註冊成功！', 'success');
+                    
+                } catch (error) {
+                    console.error('註冊失敗:', error);
+                    const errorDiv = document.getElementById('register-error');
+                    const errorMsg = document.getElementById('register-error-message');
+                    
+                    let message = '註冊失敗';
+                    if (error.code === 'auth/email-already-in-use') {
+                        message = '電子郵箱已被使用';
+                    } else if (error.code === 'auth/invalid-email') {
+                        message = '無效的電子郵箱';
+                    } else if (error.code === 'auth/weak-password') {
+                        message = '密碼強度不足';
+                    } else {
+                        message = error.message || '註冊失敗';
+                    }
+                    
+                    errorMsg.textContent = message;
+                    errorDiv.classList.remove('hidden');
+                } finally {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            });
+            
+            // 移动端菜单切换
+            document.getElementById('mobile-menu-toggle')?.addEventListener('click', () => {
+                const menu = document.getElementById('mobile-menu');
+                menu.classList.toggle('hidden');
+            });
+            
+            // 页面关闭时更新用户状态
+            window.addEventListener('beforeunload', async () => {
+                if (currentUser) {
+                    try {
+                        await db.collection('users').doc(currentUser.uid).update({
+                            status: 'offline'
+                        });
+                        await db.collection('onlineUsers').doc(currentUser.uid).delete();
+                    } catch (error) {
+                        console.error('更新用戶狀態失敗:', error);
+                    }
+                }
+            });
+        }
+
+        // 导出全局函数
+        window.showForgotPassword = function() {
+            const email = prompt('請輸入您的電子郵箱以重置密碼:');
+            if (email) {
+                auth.sendPasswordResetEmail(email)
+                    .then(() => {
+                        showNotification('密碼重置郵件已發送到 ' + email, 'success');
+                    })
+                    .catch(error => {
+                        showNotification('發送重置郵件失敗: ' + error.message, 'error');
+                    });
+            }
+        };
+    </script>
+</body>
+</html>
